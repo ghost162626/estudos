@@ -2,38 +2,61 @@ import fs from 'fs';
 import path from 'path';
 
 export default function handler(req, res) {
-  // 1. CAPTURA O IP (PARTE IMPORTANTE!)
+  // CAPTURA O IP
   const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || 'IP não detectado';
+  console.log('📸 Tentando acessar foto - IP:', ip);
   
-  console.log('📸 FOTO ACESSADA!');
-  console.log('🌐 IP:', ip);
-  console.log('📅 Data:', new Date().toLocaleString('pt-BR'));
-  console.log('👤 Navegador:', req.headers['user-agent']?.substring(0, 80) || 'N/A');
+  // Tenta vários caminhos possíveis
+  const caminhosPossiveis = [
+    path.join(process.cwd(), 'public', 'foto.png'),
+    path.join(process.cwd(), 'public', 'imagem.png'),
+    path.join(process.cwd(), 'public', 'minha-foto.png'),
+    path.join(process.cwd(), 'public', 'imagens', 'foto.png'),
+    path.join(process.cwd(), 'public', 'images', 'foto.png'),
+    path.join(process.cwd(), 'foto.png'), // direto na raiz
+  ];
   
-  // 2. ENVIA PARA DISCORD (se quiser)
-  // fetch('webhook-discord', {method: 'POST', body: JSON.stringify({ip})});
+  let fotoBuffer = null;
+  let caminhoEncontrado = null;
   
-  try {
-    // 3. LÊ SUA FOTO REAL da pasta public/
-    const fotoPath = path.join(process.cwd(), 'public', 'minha-foto.png');
-    
-    // Verifica se foto existe
-    if (!fs.existsSync(fotoPath)) {
-      console.log('❌ Foto não encontrada:', fotoPath);
-      return res.status(404).send('Foto não encontrada');
+  // Procura a foto
+  for (const caminho of caminhosPossiveis) {
+    console.log('🔍 Procurando em:', caminho);
+    if (fs.existsSync(caminho)) {
+      console.log('✅ Foto encontrada em:', caminho);
+      caminhoEncontrado = caminho;
+      try {
+        fotoBuffer = fs.readFileSync(caminho);
+        break;
+      } catch (err) {
+        console.log('❌ Erro ao ler:', err.message);
+      }
     }
-    
-    const fotoBuffer = fs.readFileSync(fotoPath);
-    
-    // 4. ENVIA SUA FOTO REAL para o navegador
-    res.setHeader('Content-Type', 'image/png');
-    res.setHeader('Content-Length', fotoBuffer.length);
-    res.setHeader('Cache-Control', 'public, max-age=3600');
-    
-    res.send(fotoBuffer);
-    
-  } catch (error) {
-    console.error('❌ Erro ao carregar foto:', error);
-    res.status(500).send('Erro');
   }
+  
+  // Se não encontrou foto
+  if (!fotoBuffer) {
+    console.log('❌ Nenhuma foto encontrada! Criando imagem de erro...');
+    
+    // Cria uma imagem de erro simples (SEM canvas)
+    const erroPng = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsTAAALEwEAmpwYAAAA' +
+      'B3RJTUUH5gQHBTAlHt4BywAAAIpJREFUOMtjYBgFo2AU0A38////HwMDAwMqHwTAADQYDjAxMTGg' +
+      '8hH5////h0swoopjU4iLDwNwEwweA+AmYDOIWD5WJzCQ4gR0TVj5qIYxYTOEGD5WA4hxAtwLyIYQ' +
+      'y8dqAANOABpCsHysBjDgBGAhhJeP1QlwL4AMIYYP0w8A9UJvb1UqH/QAAAAASUVORK5CYII=',
+      'base64'
+    );
+    
+    res.setHeader('Content-Type', 'image/png');
+    res.send(erroPng);
+    return;
+  }
+  
+  // Se encontrou, envia a foto
+  console.log('📤 Enviando foto de:', caminhoEncontrado);
+  console.log('👤 IP do visitante:', ip);
+  
+  res.setHeader('Content-Type', 'image/png');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.send(fotoBuffer);
 }
