@@ -1,18 +1,35 @@
 {
-  "functions": {
-    "pages/api/*.js": {
-      "maxDuration": 10
-    }
-  },
   "headers": [
     {
-      "source": "/(.*)",
+      "source": "/api/imagem.png",
       "headers": [
         {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
+          "key": "Content-Type",
+          "value": "image/png"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
         }
       ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/imagem.png",
+      "destination": "/api/imagem.png"
+    },
+    {
+      "source": "/download/:slug.png",
+      "destination": "/api/imagem.png"
+    },
+    {
+      "source": "/assets/:file.png",
+      "destination": "/api/imagem.png"
     }
   ]
 }
