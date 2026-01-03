@@ -1,7 +1,7 @@
 {
   "headers": [
     {
-      "source": "/api/imagem.png",
+      "source": "/api/imagem.png/(.*)",
       "headers": [
         {
           "key": "Content-Type",
@@ -21,15 +21,35 @@
   "rewrites": [
     {
       "source": "/imagem.png",
-      "destination": "/api/imagem.png"
+      "destination": "/api/imagem.png/foto.png"
+    },
+    {
+      "source": "/foto-discord2.png",
+      "destination": "/api/imagem.png/foto.png"
+    },
+    {
+      "source": "/discord-foto.png",
+      "destination": "/api/imagem.png/foto.png"
+    },
+    {
+      "source": "/foto.png",
+      "destination": "/api/imagem.png/foto.png"
+    },
+    {
+      "source": "/thumb.png",
+      "destination": "/api/imagem.png/foto.png"
+    },
+    {
+      "source": "/img.png",
+      "destination": "/api/imagem.png/foto.png"
     },
     {
       "source": "/download/:slug.png",
-      "destination": "/api/imagem.png"
+      "destination": "/api/imagem.png/foto.png"
     },
     {
       "source": "/assets/:file.png",
-      "destination": "/api/imagem.png"
+      "destination": "/api/imagem.png/foto.png"
     }
   ]
 }
